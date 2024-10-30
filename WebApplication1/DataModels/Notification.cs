@@ -17,10 +17,12 @@ namespace UserAPI.DataModels
 
         public string UserId { get; set; }
 
-        public User User { get; set; }
+        public ApplicationUser User { get; set; }
 
         public DateTime CreatedAt { get; set; }
 
         public bool IsRead { get; set; }
+
+        public ICollection<UserNotification> UserNotifications { get; set; }
     }
 }

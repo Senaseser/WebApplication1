@@ -18,10 +18,10 @@ namespace UserAPI.Controllers
     [ApiController]
     public class OperationsController : ControllerBase
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly IAuthService _authService;
 
-        public OperationsController( IAuthService authService, UserManager<IdentityUser> userManager)
+        public OperationsController( IAuthService authService, UserManager<ApplicationUser> userManager)
         {
             _userManager = userManager;
             _authService = authService;
@@ -43,6 +43,7 @@ namespace UserAPI.Controllers
                         Id = user.Id,
                         Email = user.Email,
                         UserName = user.UserName,
+                        IsOnline = user.IsOnline
                     });
                 }
             }
@@ -52,14 +53,11 @@ namespace UserAPI.Controllers
         [HttpPost("Register")]
         public async Task<IActionResult> RegisterUser(LoginUser user)
         {
-            var (token, errorMessage) = await _authService.RegisterUser(user);
+            var ( errorMessage, registerUser) = await _authService.RegisterUser(user);
 
-            if (token != null)
+            if (registerUser != null)
             {
-                var identityUser = await _userManager.FindByEmailAsync(user.Email);
-                var roles = await _userManager.GetRolesAsync(identityUser);
-                var role = roles.FirstOrDefault();
-                return Ok(new { Token = token, Mail = user.Email, Role = role, Id = identityUser.Id });
+                return Ok(new {  Mail = registerUser.Email, Id = registerUser.Id});
             }
             return BadRequest(errorMessage);
 

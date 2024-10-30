@@ -11,17 +11,37 @@ using System.Threading.Tasks;
 
 namespace UserAPI.DataModels
 {
-    public class UserAdminContext : IdentityDbContext
+    public class UserAdminContext : IdentityDbContext<ApplicationUser>
     {
         public UserAdminContext(DbContextOptions<UserAdminContext> options) : base(options)
-        { }
+        {
+        }
 
-        public DbSet<User> User { get; set; }
+        public DbSet<ApplicationUser> ApplicationUsers { get; set; }
+
 
         public DbSet<Notification> Notification { get; set; }
 
 
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            builder.Entity<UserNotification>()
+                .HasKey(un => new { un.UserId, un.NotificationId });
+
+            builder.Entity<UserNotification>()
+                .HasOne(un => un.User)
+                .WithMany(u => u.UserNotifications)
+                .HasForeignKey(un => un.UserId);
+
+            builder.Entity<UserNotification>()
+                .HasOne(un => un.Notification)
+                .WithMany(n => n.UserNotifications)
+                .HasForeignKey(un => un.NotificationId);
+        }
 
 
     }
+
 }

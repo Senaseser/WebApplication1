@@ -17,9 +17,9 @@ namespace UserAPI.Controllers
 
     {
         private readonly IAuthService _authService;
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public AdminController(IAuthService authService, UserManager<IdentityUser> userManager)
+        public AdminController(IAuthService authService, UserManager<ApplicationUser> userManager)
         {
             _authService = authService;
             _userManager = userManager;

@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections;
@@ -16,31 +18,34 @@ namespace UserAPI.Services
     public class AuthService : IAuthService
 
     {
-        private readonly UserManager<IdentityUser> _userManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _config;
+        private readonly IServiceProvider _serviceProvider;
 
-        public AuthService(UserManager<IdentityUser> userManager,IConfiguration config,RoleManager<IdentityRole> rolemanager)
+        public AuthService(UserManager<ApplicationUser> userManager,IConfiguration config,RoleManager<IdentityRole> rolemanager,IServiceProvider serviceProvider)
         {
             _userManager = userManager;
             _roleManager = rolemanager;
             _config = config;
+            _serviceProvider = serviceProvider;
         }
 
 
-        public async Task<(string Token, string ErrorMessage)> RegisterUser(LoginUser user)
+        public async Task<( string ErrorMessage, ApplicationUser User)> RegisterUser(LoginUser user)
         {
-            var identityUser = new IdentityUser
+            var identityUser = new ApplicationUser
             {
                 UserName = user.Email,
-                Email = user.Email
+                Email = user.Email,
+                IsOnline = false,
             };
             var result = await _userManager.CreateAsync(identityUser, user.Password);
             if (!result.Succeeded)
             {
                 var errors = result.Errors.Select(e => e.Description);
                 var message = string.Join(", ", errors);
-                return (null,  message);
+                return (  message, identityUser);
             }
 
             if (!await _roleManager.RoleExistsAsync("User"))
@@ -48,12 +53,7 @@ namespace UserAPI.Services
                     await _roleManager.CreateAsync(new IdentityRole("User"));
                 }
                 await _userManager.AddToRoleAsync(identityUser, "User");
-                var (token,errorMessage) = await LoginUser(user);
-            if (token == null)
-            {
-                return (null,  errorMessage);
-            }
-                return (token,null);
+            return ("Kayıt başarılı.", identityUser);
 
         }
         public async Task<(string Token, string ErrorMessage)> LoginUser(LoginUser user)
@@ -74,6 +74,13 @@ namespace UserAPI.Services
                 return (null, "This account is not a user account");
             }
             var token = await GenerateTokenString(identityUser);
+
+            identityUser.IsOnline = true;
+            await _userManager.UpdateAsync(identityUser);
+
+            var hubContext = _serviceProvider.GetService<IHubContext<NotificationHub>>();
+            await hubContext.Clients.All.SendAsync("UserOnline", identityUser.Id);
+
             return (token, null);
         }
         public async Task<(string Token, string ErrorMessage)> LoginAdmin(LoginUser user)
@@ -97,7 +104,7 @@ namespace UserAPI.Services
             return (token,null);
         }
 
-        public async Task<string> GenerateTokenString(IdentityUser user)
+        public async Task<string> GenerateTokenString(ApplicationUser user)
         {
             var roles = await _userManager.GetRolesAsync(user);
             var role = roles.FirstOrDefault();

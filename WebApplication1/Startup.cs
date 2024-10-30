@@ -28,17 +28,20 @@ namespace WebApplication1
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddCors(o => o.AddPolicy("FormPolicy", builder =>
+            services.AddCors(o => o.AddPolicy("AllowSpecificOrigin", builder =>
             {
-                builder.AllowAnyOrigin()
-                       .AllowAnyMethod()
-                       .AllowAnyHeader();
+                builder.WithOrigins("http://localhost:4200", "http://localhost:54850", "http://localhost:58217", "http://localhost:53189") 
+                     .AllowAnyMethod()
+                     .AllowAnyHeader()
+                     .AllowCredentials();
 
             }));
-
+            services.AddScoped<IRabbitMqService, RabbitMqService>();
             services.AddControllers();
             services.AddDbContext<UserAdminContext>(options => options.UseSqlServer(Configuration.GetConnectionString("UserAdminPortalDb")));
-            services.AddIdentity<IdentityUser, IdentityRole>(options =>
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddSignalR();
+            services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
                 options.SignIn.RequireConfirmedAccount = false;
             }).AddEntityFrameworkStores<UserAdminContext>().AddDefaultTokenProviders();
@@ -86,7 +89,7 @@ namespace WebApplication1
             CreateRoles(serviceProvider).Wait();
             AssignRoles(serviceProvider).Wait();
 
-            app.UseCors("FormPolicy");
+            app.UseCors("AllowSpecificOrigin");
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
@@ -94,6 +97,7 @@ namespace WebApplication1
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHub<NotificationHub>("/notificationHub");
             });
         }
         private async Task CreateRoles(IServiceProvider serviceProvider)
@@ -113,14 +117,14 @@ namespace WebApplication1
         }
         private async Task AssignRoles(IServiceProvider serviceProvider)
         {
-            var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
             string email = "admin@admin.com";
             string password = "Test1234,";
 
             if (await userManager.FindByEmailAsync(email) == null)
             {
-                var user = new IdentityUser();
+                var user = new ApplicationUser();
                 user.UserName = email;
                 user.Email = email;
 

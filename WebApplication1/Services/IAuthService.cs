@@ -6,8 +6,8 @@ namespace UserAPI.Services
 {
     public interface IAuthService
     {
-        Task<string> GenerateTokenString(IdentityUser user);
-        Task<(string Token, string ErrorMessage)> RegisterUser(LoginUser user);
+        Task<string> GenerateTokenString(ApplicationUser user);
+        Task<(string ErrorMessage,ApplicationUser User)> RegisterUser(LoginUser user);
 
         Task<(string Token, string ErrorMessage)> LoginUser(LoginUser user);
        Task<(string Token, string ErrorMessage)> LoginAdmin(LoginUser user);

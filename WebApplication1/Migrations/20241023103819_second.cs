@@ -2,7 +2,7 @@
 
 namespace UserAPI.Migrations
 {
-    public partial class admin : Migration
+    public partial class second : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
